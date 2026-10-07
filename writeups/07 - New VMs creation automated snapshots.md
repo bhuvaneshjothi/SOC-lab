@@ -14,9 +14,18 @@ The Ubuntu Server VM (`vm-ubuntu-server`) was booted up on VLAN 20 (`172.16.20.0
 
 1. Checked network interface status using `ip a`. The primary interface `ens18` was in a `DOWN` state.
 
+<img width="1088" height="284" alt="Screenshot 2026-10-04 194646" src="https://github.com/user-attachments/assets/ec0aee56-59eb-4d8f-b1d4-59999332ef21" />
+
+<img width="1364" height="532" alt="Screenshot 2026-10-04 194807" src="https://github.com/user-attachments/assets/a6676326-db09-49a8-8706-f498c9be3ecc" />
+
+
 2. Attempted to bring the link up manually via `sudo ip link set ens18 up`. The link changed state to `UP`, but no IP configuration was assigned.
 
 3. Checked Netplan configurations in `/etc/netplan/*.yaml`. No netplan configuration file was present on the OS.
+
+<img width="654" height="64" alt="Screenshot 2026-10-04 194858" src="https://github.com/user-attachments/assets/d3fe2577-317b-460e-affe-139202a3c101" />
+
+<img width="776" height="252" alt="Screenshot 2026-10-04 194910" src="https://github.com/user-attachments/assets/1e48fa0f-32c4-4310-beeb-6406e1bb35b5" />
 
 ### Resolution Steps
 
@@ -24,6 +33,8 @@ The Ubuntu Server VM (`vm-ubuntu-server`) was booted up on VLAN 20 (`172.16.20.0
 
 2. **Created Netplan Configuration File**:
    Created `/etc/netplan/01-netcfg.yaml` with explicit DHCP configuration:
+
+<img width="862" height="176" alt="Screenshot 2026-10-04 195310" src="https://github.com/user-attachments/assets/66b60bec-ced1-44b0-88ea-93ce8f343e31" />
 
    ```
    network:
@@ -37,11 +48,19 @@ The Ubuntu Server VM (`vm-ubuntu-server`) was booted up on VLAN 20 (`172.16.20.0
 3. **Applied Netplan & Verified IP Assignment**:
    Applied the configuration via `sudo netplan apply`. The interface successfully obtained IP `172.16.20.100/24` from pfSense DHCP.
 
+<img width="1138" height="388" alt="Screenshot 2026-10-04 195416" src="https://github.com/user-attachments/assets/e093a4fc-c414-4c30-9080-d15988630b99" />
+
 4. **Connectivity & Routing Verification**:
    Executed ICMP ping tests from the Ubuntu Server to the gateway (`172.16.30.1`) and other lab hosts (`172.16.30.100`) to confirm cross-VLAN routing functionality.
 
+<img width="808" height="344" alt="Screenshot 2026-10-04 195611" src="https://github.com/user-attachments/assets/6f26abea-0919-452c-9500-3f7c5e6539e6" />
+
 5. **SSH Service Activation**:
    Verified OpenSSH server status on Ubuntu Server to ensure SSH access for remote management.
+
+<img width="1100" height="286" alt="Screenshot 2026-10-04 202750" src="https://github.com/user-attachments/assets/66aa0ee2-696c-45d8-9889-f68d73b3887d" />
+
+<img width="1064" height="274" alt="Screenshot 2026-10-04 203642" src="https://github.com/user-attachments/assets/7d5c10b4-4578-45ee-818d-be0de22aaadf" />
 
 ## 2. Troubleshooting Windows Target VM Network & SSH
 
@@ -49,15 +68,28 @@ The Ubuntu Server VM (`vm-ubuntu-server`) was booted up on VLAN 20 (`172.16.20.0
 
 The Windows 10 Target VM (`vm-win10-target`) failed to acquire an IP address on its assigned subnet.
 
+<img width="1044" height="562" alt="Screenshot 2026-10-06 215607" src="https://github.com/user-attachments/assets/17ef240a-0451-4d7f-a2dd-b7a3ff166f06" />
+
 ### Diagnostics & Resolution
 
 1. **VirtIO Drivers**: Verified that Red Hat VirtIO network drivers were installed properly inside Windows Device Manager.
+
+<img width="420" height="342" alt="Screenshot 2026-10-06 215406" src="https://github.com/user-attachments/assets/584b0b5b-48e8-40c7-9fc9-fb4d41181b59" />
+
+<img width="1940" height="628" alt="Screenshot 2026-10-06 215848" src="https://github.com/user-attachments/assets/f297972b-ac17-4957-ae26-9a6666aee65f" />
+
 
 2. **Proxmox Interface Misconfiguration**: Inspected Proxmox hardware settings for the Windows VM. Discovered that the virtual network card was accidentally attached to **`vmbr0`** instead of **`vmbr1`**.
 
 3. **Fix**: Changed the Network Device bridge setting to `vmbr1` with VLAN awareness enabled.
 
+<img width="1382" height="710" alt="Screenshot 2026-10-06 215802" src="https://github.com/user-attachments/assets/9869eafa-9f85-414c-9c1d-38d04ad81407" />
+<img width="1366" height="686" alt="Screenshot 2026-10-06 215820" src="https://github.com/user-attachments/assets/2feb6e01-a913-4138-8c79-3be5e904da67" />
+
+
 4. **DHCP Acquisition**: Re-enabled the network adapter in Windows; the VM immediately received a DHCP address from pfSense.
+
+<img width="550" height="556" alt="Screenshot 2026-10-06 220225" src="https://github.com/user-attachments/assets/ba0938b0-bcde-463e-9bab-dc543c099304" />
 
 5. **OpenSSH Setup**: Installed and started the OpenSSH Server feature inside Windows 10 to allow CLI administration.
 
@@ -82,63 +114,6 @@ For firewall rule testing, **Disk-Only snapshots** were selected to ensure clean
 
 A Bash script was placed at `/root/scripts/snapshot_disk_only.sh` to iterate through all registered VMs on the host sequentially and take a disk-only snapshot with auto-generated timestamps.
 
-### Script Source Code (`/root/scripts/snapshot_disk_only.sh`)
-
-```
-#!/bin/bash
-
-# ==============================================================================
-# Proxmox VE Automated Date/Time Disk-Only Snapshot Script
-# ==============================================================================
-
-TIMESTAMP=$(date +'%Y%m%d_%H%M%S')
-READABLE_DATE=$(date +'%Y-%m-%d %H:%M:%S')
-
-SNAP_NAME="Snap_${TIMESTAMP}"
-SNAP_DESC="${1:-Automated disk-only snapshot taken on ${READABLE_DATE}}"
-
-echo "================================================================="
-echo "            Proxmox VE Disk-Only Snapshot Tool                   "
-echo "================================================================="
-echo " Snapshot Name : $SNAP_NAME"
-echo " Description   : $SNAP_DESC"
-echo " Mode          : Disk-Only (--vmstate 0)"
-echo "================================================================="
-echo ""
-
-VM_LIST=$(qm list | awk 'NR>1 {print $1}')
-
-if [ -z "$VM_LIST" ]; then
-    echo "[!] Error: No virtual machines found on this host."
-    exit 1
-fi
-
-for vmid in $VM_LIST; do
-    VM_NAME=$(qm config "$vmid" 2>/dev/null | grep '^name:' | awk '{print $2}')
-    if [ -z "$VM_NAME" ]; then
-        VM_NAME="Unknown"
-    fi
-
-    echo "-----------------------------------------------------------------"
-    echo "[->] STARTING: VM $vmid ($VM_NAME)..."
-    echo "     Processing disk snapshot, please wait..."
-
-    if qm snapshot "$vmid" "$SNAP_NAME" --description "$SNAP_DESC" --vmstate 0 >/dev/null 2>&1; then
-        echo "[✓] SUCCESS: VM $vmid ($VM_NAME) snapshot completed!"
-    else
-        echo "[✗] ERROR: Snapshot failed for VM $vmid ($VM_NAME)."
-    fi
-    
-    echo "-----------------------------------------------------------------"
-    echo ""
-done
-
-echo "================================================================="
-echo "[✓] ALL VM SNAPSHOT TASKS FINISHED"
-echo "================================================================="
-
-```
-
 ### Execution & Verification
 
 The script was granted executable privileges (`chmod +x /root/scripts/snapshot_disk_only.sh`) and executed in the terminal.
@@ -147,5 +122,8 @@ The script was granted executable privileges (`chmod +x /root/scripts/snapshot_d
 /root/scripts/snapshot_disk_only.sh "Pre-hardening baseline"
 
 ```
+<img width="1210" height="888" alt="image" src="https://github.com/user-attachments/assets/0306c06a-5a79-490e-bde9-cca40d69697e" />
+
+<img width="1172" height="918" alt="Screenshot 2026-10-06 224426" src="https://github.com/user-attachments/assets/1c37f977-2817-4df8-8d62-5eefefdf3d37" />
 
 All virtual machines (`vm-pfsense`, `vm-ubuntu-wazuh`, `vm-ubuntu-server`, and `vm-win10-target`) were successfully snapshotted and secured as a baseline for the upcoming firewall hardening phase.
