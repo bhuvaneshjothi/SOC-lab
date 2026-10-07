@@ -114,6 +114,9 @@ For firewall rule testing, **Disk-Only snapshots** were selected to ensure clean
 
 A Bash script was placed at `/root/scripts/snapshot_disk_only.sh` to iterate through all registered VMs on the host sequentially and take a disk-only snapshot with auto-generated timestamps.
 
+The complete automation script is stored in the repository at [`/scripts/snapshot_disk_only.sh`](../scripts/snapshot_disk_only.sh).
+
+
 ### Execution & Verification
 
 The script was granted executable privileges (`chmod +x /root/scripts/snapshot_disk_only.sh`) and executed in the terminal.
